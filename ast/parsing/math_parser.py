@@ -1,0 +1,5 @@
+
+TOKENS = Enum('TOKENS', 'NUM VAR IMAGINARY VEC MAT TRANS PLUS MINUS SUM PROD MUL DIV MOD FACTORIAL POW SQRT ABS SIN COS TAN SEC CSC COT')#More to be added
+def parse(str):
+    str = str
+    
