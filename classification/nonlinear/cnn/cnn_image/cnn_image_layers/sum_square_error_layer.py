@@ -17,7 +17,7 @@ class SumSquareErrorLayer(CNNLayer):
         for i in range(grad.shape[0]):
             for j in range(grad.shape[1]):
                 for k in range(grad.shape[2]):
-                    grad[i,j,k,i,j,k] = -(layer_out[i,j,k]-X[i,j,k])
+                    grad[i,j,k,i,j,k] = (X[i,j,k]-layer_out[i,j,k])
         return grad
 
     #updates the representation of this layer's parameter gradients (if the layer has adjustable paramaters)

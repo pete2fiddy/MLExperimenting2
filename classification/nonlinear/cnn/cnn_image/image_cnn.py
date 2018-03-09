@@ -25,12 +25,20 @@ class ImageCNN(Classifier):
         for step in range(num_steps):
             tot_error = 0
             for img_index in range(X.shape[0]):
+
+                if img_index % 25 == 0:
+                    print("batch " + str(step) + " image " + str(img_index))
                 predict, inouts = self.predict(X[img_index], inouts = True)
+
                 inouts[-1] = y[img_index]
                 tot_error += self.__layers[-1].error(predict, y[img_index])#BAD PRACTICE, last layer not guaranteed to be an error layer, append
                 #there is no rigidity that guarantees error layers to have an error method
                 self.__layers[-1].backprop_update_gradient(inouts, print_times = False)
-                self.__layers[0].step_net_params(learn_rate)
+                #self.__layers[0].step_net_params(learn_rate)
+                for i in range(len(self.__layers)):
+                    #print("layer " + str(i) + ": ")
+                    self.__layers[i].step_params(learn_rate)
+            #print("training batch " + str(step))
             print("Mean Error: ", tot_error/X.shape[0])
 
 

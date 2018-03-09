@@ -30,6 +30,7 @@ import toolbox.imageop as imageop
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.convolution_layer import ConvolutionLayer
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.relu_layer import ReluLayer
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.sigmoid_layer import SigmoidLayer
+from classification.nonlinear.cnn.cnn_image.cnn_image_layers.tanh_layer import TanhLayer
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.sum_square_error_layer import SumSquareErrorLayer
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.fully_connected_layer import FullyConnectedLayer
 from classification.nonlinear.cnn.cnn_image.cnn_image_layers.softmax_layer import SoftmaxLayer
@@ -49,15 +50,17 @@ img_volume[:,:,0] = img
 '''
 
 #CNN Improvements:
-#MIGHT need to change weight/bias updates to be multiplied with the total X derivative from the NEXT layer (possible am doing)
-#partial ln/partial x * partial ln/partial weights instead of partial ln+1/partial ln * partial ln/partial weights
-
-#Implement fully connected layers (Duh)
+#GO THROUGH NET AND MAKE SURE ALL NUMPY SPEEDUPS YIELD THE CORRECT SIZE, ESPECIALLY WHEN += THEM TO A GRADIENT ARRAY
+#GRADIENTS FOR LAST PARAMETER LAYER (EITHER ONLY FC OR BOTH CONV AND FC) APPEAR NOT TO MOVE AT ALL
+#POSSIBLE NUMERICAL STABILITY ISSUES
+#add a nicer total differntial calculator that works for paramter gradients too. (FC layer and conv layer all seem to apply the same
+#/similar process)
 #completely optimize the methods of CNNLayer first, as every layer uses them and will give the most speed improvements
 #add a bias per kernel? May be redundant/bad
 #add abstract class for CNN error layers (placed at end)
 #make it so that fully connected layers don't need to know their input dimensions by user input. Would be nice if they could
 #figure it out themselves
+#add an assertion for FC layers that makes sure dimensions are correctly satisfied
 mndata = MNIST("C:/Users/Peter/Desktop/Free Time CS Projects/ML Experimenting 2/data/MNIST")
 mndata.gz = True
 X_old, y_old = mndata.load_training()
@@ -66,43 +69,83 @@ X = []
 y = []
 for i in range(0, len(X_old)):
     #print("X_old[i]: ", X_old[i])
-    if y_old[i] == 0 or y_old[i] == 1:
-        img_flat = (np.asarray(X_old[i]).astype(np.float64))/255.0
-        #print("img_flat: ", img_flat)
-        img_square = img_flat.reshape(int(np.sqrt(img_flat.shape[0])), int(np.sqrt(img_flat.shape[0])))
-        img_volume = np.zeros(img_square.shape + (1,), dtype = np.float64)
-        img_volume[:,:,0] = img_square
-        X.append(img_volume)
-        iter_y = np.zeros((2,1,1), dtype = np.float64)
-        iter_y[y_old[i],0,0] = 1.0
-        y.append(iter_y)
-    if len(X) >= 20:
+    #if y_old[i] == 0 or y_old[i] == 1:
+    img_flat = (np.asarray(X_old[i]).astype(np.float64))/(255.0)
+    #print("img_flat: ", img_flat)
+    img_square = img_flat.reshape(int(np.sqrt(img_flat.shape[0])), int(np.sqrt(img_flat.shape[0])))
+    img_volume = np.zeros(img_square.shape + (1,), dtype = np.float64)
+    img_volume[:,:,0] = img_square
+    X.append(img_volume)
+    iter_y = np.zeros((10,1,1), dtype = np.float64)
+    iter_y[y_old[i],0,0] = 1.0
+    y.append(iter_y)
+    if len(X) >= 100:
         break
     #y.append(img_volume)
 
 X = np.asarray(X)
 y = np.asarray(y)
+
+'''
 l1 = ConvolutionLayer((5,5), 10, (1,1), (2,2))
 l2 = SigmoidLayer()
 l3 = ConvolutionLayer((5,5), 10, (2,2), (2,2))
 l4 = SigmoidLayer()
 l5 = ConvolutionLayer((3,3), 10, (2,2), (1,1))
 l6 = SigmoidLayer()
-l7 = FullyConnectedLayer(40, (7,7,10))
+l7 = FullyConnectedLayer(10, (7,7,10))
 l8 = SigmoidLayer()
-l9 = FullyConnectedLayer(2, (40,1,1))
-l10 = SigmoidLayer()
+l9 = FullyConnectedLayer(2, (10,1,1))
+l10 = SoftmaxLayer()
 l11 = SumSquareErrorLayer()
 
 cnn = ImageCNN([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11])
+'''
+
+
+#maybe problem is need to do chain rule for gradients/weights using THEIR layer's total gradient
+
+l1 = ConvolutionLayer((5,5), 5, (1,1), (2,2))
+l2 = ReluLayer()
+l3 = ConvolutionLayer((5,5), 1, (2,2), (2,2))
+l4 = ReluLayer()
+l5 = FullyConnectedLayer(10, (14,14,1))
+l6 = ReluLayer()
+l7 = FullyConnectedLayer(2, (100,1,1))
+l8 = SoftmaxLayer()
+l9 = SumSquareErrorLayer()
+
+cnn = ImageCNN([l1,l2,l3,l4,l5,l8,l9])
+
+
+#working layers: Sigmoid, Softmax, FullyConnectedLayer, CNNLayer, ReluLayer
+'''
+l1 = FullyConnectedLayer(250, (28,28,1))
+l2 = SigmoidLayer()
+l3 = FullyConnectedLayer(100, (250,1,1))
+l4 = SigmoidLayer()
+l5 = FullyConnectedLayer(2, (100,1,1))
+l6 = SoftmaxLayer()
+l7 = SumSquareErrorLayer()
+cnn = ImageCNN([l1,l2,l3,l4,l5,l6,l7])
+'''
 
 #cnn_out = cnn.predict(img_volume)
 #print("cnn_out; ", cnn_out)
 
-cnn.fit(X, y, learn_rate = -1, num_steps = 10)
+
+
+
+
+cnn.fit(X, y, learn_rate = -.005, num_steps = 10)
+
 
 num_right = 0
 for i in range(X.shape[0]):
+    print("X[i] shape: ", X[i].shape)
+    if i%int(X.shape[0]/5) == 0:
+        cv2.imshow("X[i]", np.uint8(255*X[i,:,:,0]))
+        cv2.waitKey(0)
     prediction = cnn.predict(X[i])
     print("prediction: ", prediction)
     print("np.argmax(prediction): ", np.argmax(prediction))
@@ -110,7 +153,6 @@ for i in range(X.shape[0]):
     if np.argmax(prediction) == np.argmax(y[i]):
         num_right += 1
 print("Total accuracy: " + str(100*num_right/X.shape[0]) + "%")
-
 
 
 '''
